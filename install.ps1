@@ -110,6 +110,30 @@ function Restart-Steam {
     Write-ABOk "Steam aberta novamente."
 }
 
+function Copy-PluginFiles {
+    param(
+        [string]$Source,
+        [string]$Target
+    )
+
+    if (-not (Test-Path (Join-Path $Source "plugin.json"))) {
+        throw "A pasta baixada nao contem plugin.json: $Source"
+    }
+
+    $items = Get-ChildItem -LiteralPath $Source -Force
+    if (-not $items -or $items.Count -eq 0) {
+        throw "A pasta baixada esta vazia: $Source"
+    }
+
+    foreach ($item in $items) {
+        Copy-Item -LiteralPath $item.FullName -Destination $Target -Recurse -Force
+    }
+
+    if (-not (Test-Path (Join-Path $Target "plugin.json"))) {
+        throw "Instalacao incompleta: plugin.json nao foi copiado para $Target"
+    }
+}
+
 Write-ABHeader
 
 $SteamPath = Find-SteamPath
@@ -153,7 +177,7 @@ try {
 
     Write-ABStep "Instalando o plugin..."
     New-Item -ItemType Directory -Force -Path $target | Out-Null
-    Copy-Item -Path (Join-Path $source "*") -Destination $target -Recurse -Force
+    Copy-PluginFiles -Source $source -Target $target
 
     foreach ($name in $preserve) {
         $saved = Join-Path $tmp ("preserve-" + $name)
@@ -162,6 +186,7 @@ try {
         }
     }
     Write-ABOk "AchievementBackup instalado."
+    Write-ABOk "Manifest encontrado: $(Join-Path $target "plugin.json")"
 
     if ($NoRestart) {
         Write-ABWarn "Instalacao concluida sem reiniciar. Abra/reinicie a Steam manualmente para carregar o plugin."
