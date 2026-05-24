@@ -22,16 +22,18 @@ Requisito: Steam com [Millennium](https://steambrew.app/) instalado.
 Abra o PowerShell e execute:
 
 ```powershell
-iwr https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1 -UseB | iex
+irm "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1" | iex
 ```
 
 Se sua Steam estiver em outro caminho:
 
 ```powershell
-& ([scriptblock]::Create((iwr https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1 -UseB).Content)) -SteamPath "D:\steam"
+$p="$env:TEMP\AchievementBackup-install.ps1"; iwr "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1" -OutFile $p -UseB; powershell -NoProfile -ExecutionPolicy Bypass -File $p -SteamPath "D:\steam"
 ```
 
 Depois reinicie a Steam e abra o AchievementBackup pelo botão do plugin.
+
+Se o GitHub retornar `404`, deixe o repositório público. O instalador e o auto update precisam acessar os arquivos pelo GitHub raw.
 
 ## O que o plugin salva
 

@@ -15,13 +15,13 @@ Plugin para Millennium/Steam criado por **Yuykkk** para proteger dados locais da
 ## Instalação
 
 ```powershell
-iwr https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1 -UseB | iex
+irm "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1" | iex
 ```
 
 Com Steam em outro caminho:
 
 ```powershell
-& ([scriptblock]::Create((iwr https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1 -UseB).Content)) -SteamPath "D:\steam"
+$p="$env:TEMP\AchievementBackup-install.ps1"; iwr "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1" -OutFile $p -UseB; powershell -NoProfile -ExecutionPolicy Bypass -File $p -SteamPath "D:\steam"
 ```
 
 ## O que pode ser salvo
