@@ -1640,11 +1640,9 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
 
 def trigger_external_restore(backup_folder_name):
     backup_src = os.path.join(BACKUP_ROOT, backup_folder_name)
-    steam_exe = _resolve_steam_exe()
-    steam_dir = os.path.dirname(steam_exe)
+    steam_exe = os.path.join(STEAM_PATH, "steam.exe")
     temp_bat = os.path.join(os.environ["TEMP"], "achievementbackup_restore.bat")
     flag_file = os.path.join(BACKUP_ROOT, "restore_success.flag")
-    failure_file = os.path.join(BACKUP_ROOT, RESTORE_FAILURE_FILE)
     terminal_color = restore_terminal_color()
     def _b(value):
         return str(value).replace("%", "%%")
@@ -1698,8 +1696,6 @@ def trigger_external_restore(backup_folder_name):
         "set /a FAIL=0",
         "set /a TOTAL=0",
         "set /a FILE_DONE=0",
-        f'set "FAILLOG={_b(failure_file)}"',
-        'del /F /Q "%FAILLOG%" >nul 2>&1',
         f"set /a FILE_TOTAL={max(restore_file_total, 1)}",
         "set /a STEP=0",
         "set /a STEPS=8",
@@ -1737,22 +1733,19 @@ def trigger_external_restore(backup_folder_name):
                 'if exist "%SRC%" (',
                 '  if exist "%DST%" attrib -R "%DST%" >nul 2>&1',
                 '  copy /Y "%SRC%" "%DST%" >nul',
-                '  if errorlevel 1 (set /a FAIL+=1 & echo COPY^|saves externos^|%DST%^|%SRC%>>"%FAILLOG%") else (set /a OK+=1)',
+                '  if errorlevel 1 (set /a FAIL+=1) else (set /a OK+=1)',
                 ') else (',
                 '  set /a FAIL+=1',
-                '  echo ORIGEM AUSENTE^|saves externos^|%DST%^|%SRC%>>"%FAILLOG%"',
                 ')',
                 "set /a FILE_DONE+=1",
             ])
     summary_text = ", ".join(restore_labels or ["backup da Steam"])
     bat_content.extend([
-        "set /a STEP=STEPS-1",
-        "call :progress Registrando restore",
-        f'set "STEAM_EXE={_b(steam_exe)}"',
-        f'set "STEAM_DIR={_b(steam_dir)}"',
-        "call :startsteam",
         f'set "RESTORE_FLAG=backup|{_b(summary_text)}|%OK%|%TOTAL%|%FAIL%"',
         f'echo(!RESTORE_FLAG! > "{flag_file}"',
+        "set /a STEP=STEPS-1",
+        "call :progress Registrando restore",
+        f'start "" "{_b(steam_exe)}"',
         "set /a STEP=STEPS",
         "call :progress Abrindo Steam novamente",
         "echo.",
@@ -1768,18 +1761,6 @@ def trigger_external_restore(backup_folder_name):
         "echo.",
         "timeout /t 8 /nobreak >nul",
         '(goto) 2>nul & del "%~f0"',
-        "",
-        ":startsteam",
-        "call :progress Abrindo Steam novamente",
-        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Start-Process -FilePath '%STEAM_EXE%' -WorkingDirectory '%STEAM_DIR%'\" >nul 2>&1",
-        "timeout /t 4 /nobreak >nul",
-        'tasklist /FI "IMAGENAME eq steam.exe" 2>nul | find /I "steam.exe" >nul && goto :eof',
-        'start "" /D "%STEAM_DIR%" "%STEAM_EXE%" >nul 2>&1',
-        "timeout /t 4 /nobreak >nul",
-        'tasklist /FI "IMAGENAME eq steam.exe" 2>nul | find /I "steam.exe" >nul && goto :eof',
-        'echo START STEAM^|Steam^|%STEAM_EXE%^|>>"%FAILLOG%"',
-        "set /a FAIL+=1",
-        "goto :eof",
         "",
         ":progress",
         "set \"MSG=%~1\"",
@@ -1823,7 +1804,7 @@ def trigger_external_restore(backup_folder_name):
         "  for %%D in (\"!OUT!\") do if not exist \"%%~dpD\" mkdir \"%%~dpD\" >nul 2>&1",
         "  if exist \"!OUT!\" attrib -R \"!OUT!\" >nul 2>&1",
         "  copy /Y \"%%F\" \"!OUT!\" >nul",
-        "  if errorlevel 1 (set /a FAIL+=1 & echo COPY^|%LABEL%^|!OUT!^|%%F>>\"%FAILLOG%\") else (set /a OK+=1)",
+        "  if errorlevel 1 (set /a FAIL+=1) else (set /a OK+=1)",
         "  set /a FILE_DONE+=1",
         "  call :progress \"%LABEL% - !REL!\"",
         ")",
