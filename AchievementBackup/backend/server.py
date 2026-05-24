@@ -1802,11 +1802,14 @@ def trigger_external_restore(backup_folder_name):
         ])
         for idx, item in enumerate(external_restore_entries, start=1):
             target_dir = os.path.dirname(item["target"])
+            source_name = os.path.basename(item["source"]).lower()
+            optional_cloud_marker = source_name == "steam_autocloud.vdf"
             bat_content.extend([
                 f"call :progress Save externo {idx}/{len(external_restore_entries)} - {_b(os.path.basename(item['target']))}",
                 f'set "SRC={_b(item["source"])}"',
                 f'set "DST={_b(item["target"])}"',
                 f'set "DSTDIR={_b(target_dir)}"',
+                f'set "OPTIONAL_CLOUD_MARKER={"1" if optional_cloud_marker else "0"}"',
                 "set /a TOTAL+=1",
                 'if not exist "%DSTDIR%" mkdir "%DSTDIR%" >nul 2>&1',
                 'if exist "%SRC%" (',
@@ -1814,8 +1817,7 @@ def trigger_external_restore(backup_folder_name):
                 '  copy /Y "%SRC%" "%DST%" >nul',
                 '  if errorlevel 1 (set /a FAIL+=1 & echo [%DATE% %TIME%] FALHA backup save externo ^| origem="%SRC%" ^| destino="%DST%" >> "%LOGFILE%") else (set /a OK+=1)',
                 ') else (',
-                '  set /a FAIL+=1',
-                '  echo [%DATE% %TIME%] FALHA backup save externo origem ausente ^| origem="%SRC%" ^| destino="%DST%" >> "%LOGFILE%"',
+                '  if "%OPTIONAL_CLOUD_MARKER%"=="1" (set /a OK+=1 & echo [%DATE% %TIME%] IGNORADO marcador Steam Cloud ausente ^| origem="%SRC%" ^| destino="%DST%" >> "%LOGFILE%") else (set /a FAIL+=1 & echo [%DATE% %TIME%] FALHA backup save externo origem ausente ^| origem="%SRC%" ^| destino="%DST%" >> "%LOGFILE%")',
                 ')',
                 "set /a FILE_DONE+=1",
             ])

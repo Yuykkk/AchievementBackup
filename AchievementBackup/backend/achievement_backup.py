@@ -284,6 +284,8 @@ def ext_ok(path):
 
 
 def external_file_ok(path):
+    if os.path.basename(str(path or "")).lower() == "steam_autocloud.vdf":
+        return False
     ext = os.path.splitext(path.lower())[1]
     if ext in BLOCKED_EXTERNAL_EXTENSIONS:
         return False
