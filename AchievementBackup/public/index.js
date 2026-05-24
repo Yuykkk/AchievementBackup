@@ -487,6 +487,25 @@
         });
     }
 
+    function infoDialog(title, message, buttonText) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement("div");
+            overlay.className = "ab-modal-lite";
+            overlay.dataset.abTheme = currentTheme();
+            overlay.innerHTML = `
+                <div class="ab-dialog">
+                    <div class="ab-dialog-head"><strong>${esc(title)}</strong><button class="ab-icon" data-close-info>${icon.close}</button></div>
+                    <div class="ab-dialog-body">${esc(message)}</div>
+                    <div class="ab-dialog-actions">
+                        <button class="ab-command primary" data-close-info>${esc(buttonText || "Entendi")}</button>
+                    </div>
+                </div>
+            `;
+            overlay.querySelectorAll("[data-close-info]").forEach((btn) => btn.addEventListener("click", () => { overlay.remove(); resolve(true); }));
+            document.body.appendChild(overlay);
+        });
+    }
+
     function progressDialog(title, message) {
         const overlay = document.createElement("div");
         overlay.className = "ab-modal-lite";
@@ -998,6 +1017,10 @@
                     <input class="ab-toggle" type="checkbox" name="backup_all_external_saves" ${cfg.backup_all_external_saves === true ? "checked" : ""}>
                 </label>
                 <div class="ab-option">
+                    <span><strong>Atualizações</strong><p>Confira manualmente se existe uma versão nova no GitHub. O plugin também verifica sozinho quando a Steam abre.</p></span>
+                    <span class="ab-actions"><button class="ab-command" type="button" data-check-update>${icon.refresh} Checar atualização</button></span>
+                </div>
+                <div class="ab-option">
                     <span><strong>Perfil do plugin</strong><p>Guarda configurações, cor, modo de captura e apps ignorados em JSON. Se você reinstalar o plugin ou trocar a pasta, pode importar esse perfil para manter tudo igual.</p></span>
                     <span class="ab-actions"><button class="ab-command" type="button" data-import-settings>${icon.upload} Importar</button><button class="ab-command" type="button" data-export-settings>${icon.download} Exportar</button></span>
                 </div>
@@ -1159,6 +1182,7 @@
         overlay.querySelectorAll("[data-export-all]").forEach((btn) => btn.onclick = () => exportScope("all"));
         overlay.querySelectorAll("[data-export-settings]").forEach((btn) => btn.onclick = exportSettings);
         overlay.querySelectorAll("[data-import-settings]").forEach((btn) => btn.onclick = importSettings);
+        overlay.querySelectorAll("[data-check-update]").forEach((btn) => btn.onclick = manualUpdateCheck);
         overlay.querySelectorAll("[data-open-folder]").forEach((btn) => btn.onclick = () => json("/achievements/open").then(() => toast("Pasta aberta.")).catch((e) => toast(e.message)));
         overlay.querySelectorAll("[data-export-backup]").forEach((btn) => btn.onclick = () => exportScope(btn.closest("[data-folder]").dataset.folder));
         overlay.querySelectorAll("[data-rename-backup]").forEach((btn) => btn.onclick = () => renameItem(btn.closest("[data-folder]").dataset.folder, btn.closest("[data-folder]").querySelector(".ab-row-title").textContent));
@@ -1665,6 +1689,55 @@
         } catch (e) {}
     }
 
+    async function checkRestoreResult() {
+        try {
+            const data = await json("/check_restore");
+            if (!data || !data.restored) return;
+            const isSnapshot = data.type === "snapshot";
+            const isSafety = data.type === "safety";
+            const title = isSnapshot
+                ? `Captura restaurada: ${data.gameName || "jogo"}`
+                : isSafety
+                    ? `Ponto de segurança restaurado: ${data.gameName || "jogo"}`
+                    : "Backup restaurado com sucesso";
+            const counts = [
+                data.okCount != null && data.totalCount != null ? `${data.okCount} de ${data.totalCount} arquivos aplicados` : "",
+                data.copiedCount != null ? `${data.copiedCount} copiados` : "",
+                data.removedCount != null ? `${data.removedCount} removidos` : "",
+                data.failCount != null && Number(data.failCount) > 0 ? `${data.failCount} falhas` : "",
+            ].filter(Boolean).join(" | ");
+            const message = [
+                data.summary ? `Restaurado: ${data.summary}.` : "A restauração terminou e a Steam foi aberta novamente.",
+                counts,
+                data.safetyBackup ? `Cópia de segurança: ${data.safetyBackup}` : "",
+            ].filter(Boolean).join("\n");
+            await infoDialog(title, message, "Entendi");
+        } catch (e) {}
+    }
+
+    async function manualUpdateCheck() {
+        const progress = progressDialog("Checando atualização", "Consultando a versão mais recente no GitHub...");
+        try {
+            const status = await json("/update/status?force=1");
+            state.updateStatus = status || {};
+            progress.close();
+            if (!status.ok) {
+                toast(status.message || "Não foi possível checar atualização.");
+                return;
+            }
+            if (status.available) {
+                await installUpdate(status);
+            } else {
+                toast(`Tudo certo. Você já está na versão ${status.localVersion || pluginVersion()}.`);
+            }
+            await refreshData();
+            render();
+        } catch (e) {
+            progress.close();
+            toast(e.message || "Falha ao checar atualização.");
+        }
+    }
+
     function startUpdateWatcher() {
         const tick = async (force) => {
             if (state.updatePromptOpen) return;
@@ -1694,6 +1767,7 @@
         }
         injectFab();
         checkUpdateResult();
+        checkRestoreResult();
         startPendingWatcher();
         startUpdateWatcher();
         setInterval(injectFab, 3000);
