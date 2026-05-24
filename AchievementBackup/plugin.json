@@ -4,7 +4,7 @@
   "common_name": "AchievementBackup",
   "description": "Backup local de userdata, stats, saves e capturas por jogo.",
   "author": "Yuykkk",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "useBackend": true,
   "backend": "backend",
   "frontend": "frontend",

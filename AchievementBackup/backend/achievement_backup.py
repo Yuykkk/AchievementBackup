@@ -1505,6 +1505,8 @@ def launch_external_snapshot_restore(appid, game_name, files, create_safety_back
         "set /a FAIL=0",
         "set /a STEP=0",
         f"set /a STEPS={max(len(files) + 3, 4)}",
+        f'set "LOGFILE={bat_value(os.path.join(PLUGIN_ROOT, "log.txt"))}"',
+        'echo [%DATE% %TIME%] Restore de captura iniciado: ' + bat_value(game_name) + f' AppID {bat_value(appid)} >> "%LOGFILE%"',
     ]
     if create_safety_backup:
         lines.extend([
@@ -1560,7 +1562,7 @@ def launch_external_snapshot_restore(appid, game_name, files, create_safety_back
                 'if exist "%DST%" (',
                 '  attrib -R "%DST%" >nul 2>&1',
                 '  del /F /Q "%DST%" >nul 2>&1',
-                '  if errorlevel 1 (set /a FAIL+=1 & echo FALHOU AO REMOVER: "%DST%") else (set /a OK+=1 & set /a REMOVED+=1 & echo REMOVIDO: "%DST%" & if "%CLEANUPCLOUD%"=="1" call :remove_external_cloud "%DSTDIR%" "%PRUNESTOP%" & call :remove_created_dir "%CREATEDDIR%" "%CREATEDSTOP%" & call :prune_empty_dirs "%DSTDIR%" "%PRUNESTOP%")',
+                '  if errorlevel 1 (set /a FAIL+=1 & echo FALHOU AO REMOVER: "%DST%" & echo [%DATE% %TIME%] FALHA captura remover ^| destino="%DST%" >> "%LOGFILE%") else (set /a OK+=1 & set /a REMOVED+=1 & echo REMOVIDO: "%DST%" & if "%CLEANUPCLOUD%"=="1" call :remove_external_cloud "%DSTDIR%" "%PRUNESTOP%" & call :remove_created_dir "%CREATEDDIR%" "%CREATEDSTOP%" & call :prune_empty_dirs "%DSTDIR%" "%PRUNESTOP%")',
                 ') else (',
                 '  set /a OK+=1',
                 '  echo JA NAO EXISTIA: "%DST%"',
@@ -1596,10 +1598,11 @@ def launch_external_snapshot_restore(appid, game_name, files, create_safety_back
             ])
         lines.extend([
             '  copy /Y "%SRC%" "%DST%" >nul',
-            '  if errorlevel 1 (set /a FAIL+=1 & echo FALHOU: "%DST%") else (set /a OK+=1 & set /a COPYOK+=1 & echo OK: "%DST%")',
+            '  if errorlevel 1 (set /a FAIL+=1 & echo FALHOU: "%DST%" & echo [%DATE% %TIME%] FALHA captura copiar ^| origem="%SRC%" ^| destino="%DST%" >> "%LOGFILE%") else (set /a OK+=1 & set /a COPYOK+=1 & echo OK: "%DST%")',
             ') else (',
             '  set /a FAIL+=1',
             '  echo FALTOU ORIGEM: "%SRC%"',
+            '  echo [%DATE% %TIME%] FALHA captura origem ausente ^| origem="%SRC%" ^| destino="%DST%" >> "%LOGFILE%"',
             ')',
         ])
 
@@ -1610,6 +1613,7 @@ def launch_external_snapshot_restore(appid, game_name, files, create_safety_back
         f'start "" "{bat_value(steam_exe)}"',
         f'set "RESTORE_FLAG={bat_value(str(restore_kind).replace("|", "/"))}|{bat_value(str(game_name).replace("|", "/"))}|{bat_value(str(appid).replace("|", "/"))}|{bat_value(summary)}|%OK%|{len(files)}|%FAIL%|{bat_value(str(safety_root).replace("|", "/")) if create_safety_backup else ""}|%REMOVED%|%COPYOK%"',
         f'echo(!RESTORE_FLAG! > "{bat_value(os.path.join(BACKUP_ROOT, "restore_success.flag"))}"',
+        'echo [%DATE% %TIME%] Restore de captura finalizado ^| OK=%OK% ^| removidos=%REMOVED% ^| falhas=%FAIL% >> "%LOGFILE%"',
         "set /a STEP=STEPS",
         "call :progress Abrindo Steam novamente",
         "echo.",
