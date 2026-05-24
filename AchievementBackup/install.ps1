@@ -41,7 +41,7 @@ function Test-SteamRoot {
     if ([string]::IsNullOrWhiteSpace($Path)) { return $false }
     try {
         $full = [System.IO.Path]::GetFullPath(($Path -replace "/", "\"))
-        return (Test-Path (Join-Path $full "steam.exe")) -or (Test-Path (Join-Path $full "steamapps"))
+        return Test-Path (Join-Path $full "steam.exe")
     } catch {
         return $false
     }
@@ -153,7 +153,7 @@ try {
 
     Write-ABStep "Instalando o plugin..."
     New-Item -ItemType Directory -Force -Path $target | Out-Null
-    Copy-Item -LiteralPath (Join-Path $source "*") -Destination $target -Recurse -Force
+    Copy-Item -Path (Join-Path $source "*") -Destination $target -Recurse -Force
 
     foreach ($name in $preserve) {
         $saved = Join-Path $tmp ("preserve-" + $name)
