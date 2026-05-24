@@ -16,7 +16,13 @@ irm "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1
 
 O instalador tenta encontrar a pasta da Steam automaticamente, inclusive instalações fora do `C:`, usando registro do Windows, processo da Steam aberto e caminhos comuns como `D:\steam`.
 
-Depois da instalação, reinicie a Steam e abra o AchievementBackup pelo botão do plugin.
+Depois de instalar, ele reinicia a Steam sozinho para o plugin já aparecer funcionando.
+
+Se quiser instalar sem reiniciar a Steam naquele momento:
+
+```powershell
+& ([scriptblock]::Create((irm "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1"))) -NoRestart
+```
 
 ## Recursos
 

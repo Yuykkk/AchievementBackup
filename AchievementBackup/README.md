@@ -8,7 +8,13 @@ Plugin para **Millennium/Steam** criado por **Yuykkk** para proteger dados locai
 irm "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1" | iex
 ```
 
-O instalador detecta automaticamente a pasta da Steam pelo registro do Windows, processo aberto e caminhos comuns, inclusive instalações em outro disco.
+O instalador detecta automaticamente a pasta da Steam pelo registro do Windows, processo aberto e caminhos comuns, inclusive instalações em outro disco. No final, ele reinicia a Steam para o plugin já carregar funcionando.
+
+Para instalar sem reiniciar a Steam:
+
+```powershell
+& ([scriptblock]::Create((irm "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1"))) -NoRestart
+```
 
 ## Funções
 
