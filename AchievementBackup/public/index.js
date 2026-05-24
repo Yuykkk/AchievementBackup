@@ -1695,11 +1695,14 @@
             if (!data || !data.restored) return;
             const isSnapshot = data.type === "snapshot";
             const isSafety = data.type === "safety";
+            const hasFailures = data.failCount != null && Number(data.failCount) > 0;
             const title = isSnapshot
-                ? `Captura restaurada: ${data.gameName || "jogo"}`
+                ? `${hasFailures ? "Captura restaurada com avisos" : "Captura restaurada"}: ${data.gameName || "jogo"}`
                 : isSafety
-                    ? `Ponto de segurança restaurado: ${data.gameName || "jogo"}`
-                    : "Backup restaurado com sucesso";
+                    ? `${hasFailures ? "Ponto de segurança aplicado com avisos" : "Ponto de segurança restaurado"}: ${data.gameName || "jogo"}`
+                    : hasFailures
+                        ? "Backup restaurado com avisos"
+                        : "Backup restaurado com sucesso";
             const counts = [
                 data.okCount != null && data.totalCount != null ? `${data.okCount} de ${data.totalCount} arquivos aplicados` : "",
                 data.copiedCount != null ? `${data.copiedCount} copiados` : "",
@@ -1707,9 +1710,13 @@
                 data.failCount != null && Number(data.failCount) > 0 ? `${data.failCount} falhas` : "",
             ].filter(Boolean).join(" | ");
             const message = [
-                data.summary ? `Restaurado: ${data.summary}.` : "A restauração terminou e a Steam foi aberta novamente.",
+                hasFailures
+                    ? "A restauração terminou, mas alguns arquivos não foram aplicados. O restante foi restaurado normalmente."
+                    : "A restauração terminou e a Steam foi aberta novamente.",
+                data.summary ? `Restaurado: ${data.summary}.` : "",
                 counts,
                 data.safetyBackup ? `Cópia de segurança: ${data.safetyBackup}` : "",
+                hasFailures ? "Se algum save ficou faltando, tente restaurar novamente com a Steam fechada e verifique permissões do Windows/Documentos/AppData." : "",
             ].filter(Boolean).join("\n");
             await infoDialog(title, message, "Entendi");
         } catch (e) {}
