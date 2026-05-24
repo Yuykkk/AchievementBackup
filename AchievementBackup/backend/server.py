@@ -48,6 +48,34 @@ def _send_json(handler, payload, status=200):
     handler.end_headers()
     handler.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
 
+def _append_restore_log(title, payload=None):
+    try:
+        os.makedirs(PLUGIN_ROOT, exist_ok=True)
+        path = os.path.join(PLUGIN_ROOT, "log.txt")
+        stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        lines = [f"[{stamp}] {title}"]
+        if isinstance(payload, dict):
+            for key, value in payload.items():
+                if value is None or value == "":
+                    continue
+                if isinstance(value, (list, tuple)):
+                    if not value:
+                        continue
+                    lines.append(f"  {key}:")
+                    for item in value:
+                        lines.append(f"    - {item}")
+                else:
+                    lines.append(f"  {key}: {value}")
+        elif payload:
+            lines.append(f"  {payload}")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n\n")
+    except Exception as e:
+        try:
+            print(f"[AchievementBackup:WARN] restore log failed: {e}")
+        except:
+            pass
+
 def _restore_failure_kind(path, label=""):
     text = f"{label} {path}".replace("\\", "/").lower()
     if "start steam" in text or ("steam.exe" in text and "steam" in str(label).lower()):
@@ -1005,6 +1033,31 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
                 try: os.remove(flag_file) 
                 except: pass
                 failures_detail = _read_restore_failures()
+                failure_lines = []
+                for item in failures_detail:
+                    if not isinstance(item, dict):
+                        continue
+                    bits = [
+                        item.get("kind") or "Arquivo",
+                        item.get("label") or "",
+                        item.get("path") or "",
+                        item.get("reason") or "",
+                        item.get("impact") or "",
+                    ]
+                    failure_lines.append(" | ".join([str(bit) for bit in bits if bit]))
+                _append_restore_log("Restore finalizado", {
+                    "tipo": "captura" if restore_type == "snapshot" else restore_type,
+                    "jogo": game_name,
+                    "appid": appid,
+                    "restaurado": summary,
+                    "arquivos_ok": ok_count,
+                    "arquivos_total": total_count,
+                    "falhas": fail_count,
+                    "removidos_antes": removed_count,
+                    "copiados": copied_count,
+                    "backup_de_seguranca": safety_backup,
+                    "detalhes_das_falhas": failure_lines,
+                })
             self.wfile.write(json.dumps({
                 "restored": was_restored,
                 "type": restore_type,
@@ -1382,9 +1435,23 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
             try:
                 from achievement_backup import restore_achievement_snapshot
                 data = json.loads(raw_body.decode('utf-8')) if raw_body else {}
+                _append_restore_log("Restore de captura solicitado", {
+                    "snapshot_id": data.get("id"),
+                    "backup_de_seguranca": data.get("createSafetyBackup"),
+                })
                 result = restore_achievement_snapshot(data.get("id"), data.get("createSafetyBackup"))
+                _append_restore_log("Restore de captura encaminhado", {
+                    "snapshot_id": data.get("id"),
+                    "aceito": result.get("ok"),
+                    "arquivos": result.get("restored"),
+                    "mensagem": result.get("message"),
+                    "resumo": result.get("summary"),
+                })
                 _send_json(self, result, 200 if result.get("ok") else 409)
             except Exception as e:
+                _append_restore_log("Restore de captura falhou antes de iniciar", {
+                    "erro": str(e),
+                })
                 _log_event("ERROR", f"/achievements/restore failed: {e}")
                 _send_json(self, {"ok": False, "message": str(e)}, 500)
             return
@@ -1495,6 +1562,9 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
         if self.path.startswith('/restore/'):
             backup_name = self.path.replace('/restore/', '')
             backup_name = urllib.parse.unquote(backup_name)
+            _append_restore_log("Restore de backup completo solicitado", {
+                "backup": backup_name,
+            })
             self.send_response(200)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
@@ -1663,6 +1733,13 @@ def trigger_external_restore(backup_folder_name):
         if os.path.isdir(root):
             for _r, _d, files in os.walk(root):
                 restore_file_total += len(files)
+    _append_restore_log("Janela de restore preparada", {
+        "backup": backup_folder_name,
+        "origem": backup_src,
+        "steam": STEAM_PATH,
+        "arquivos_previstos": restore_file_total,
+        "partes_detectadas": ", ".join(restore_labels or ["backup da Steam"]),
+    })
     external_restore_entries = []
     try:
         meta_path = _meta_path(backup_src)
