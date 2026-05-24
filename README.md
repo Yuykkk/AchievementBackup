@@ -85,6 +85,12 @@ AchievementBackup usa dados públicos para localizar saves e exibir informaçõe
 
 O manifest do Ludusavi é distribuído sob licença MIT. Consulte o repositório original para detalhes.
 
+## Licença
+
+AchievementBackup é um projeto proprietário de **Yuykkk**. O uso pessoal é permitido, mas modificar e publicar, redistribuir, vender, reupar ou criar versões derivadas públicas exige autorização prévia do autor.
+
+Consulte o arquivo [LICENSE](LICENSE) para os termos completos.
+
 ## Aviso
 
 AchievementBackup mexe com arquivos locais da Steam e de jogos. Teste restaurações importantes com cuidado e mantenha uma cópia extra dos dados mais sensíveis.

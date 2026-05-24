@@ -30,3 +30,7 @@ Projeto desenvolvido com apoio de IA para acelerar código, textos e interface, 
 - Ludusavi Manifest: https://github.com/mtkennerly/ludusavi-manifest
 - PCGamingWiki: https://www.pcgamingwiki.com/
 - Steam Web/Store metadata para nomes e imagens dos jogos.
+
+## Licença
+
+AchievementBackup pertence a **Yuykkk**. Uso pessoal é permitido, mas modificar e publicar, redistribuir, vender, reupar ou criar versões derivadas públicas exige autorização prévia do autor.

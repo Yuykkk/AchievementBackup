@@ -1,21 +1,37 @@
-MIT License
+AchievementBackup Proprietary License
 
-Copyright (c) 2026 Yuykkk
+Copyright (c) 2026 Yuykkk.
+All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This project, including its source code, design, assets, documentation, name,
+branding, interface, and related files, belongs to Yuykkk.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Permission is granted to download and use AchievementBackup for personal use.
+
+You may not, without prior written permission from Yuykkk:
+
+- modify and publish this project or a derivative version;
+- redistribute, reupload, mirror, sublicense, sell, or package this project;
+- claim authorship or ownership of this project;
+- remove or alter copyright, author, credit, or license notices;
+- use the project name, branding, assets, or interface as if they were your own;
+- include this project in another public project, launcher, plugin pack, or commercial product.
+
+Private local changes for personal use are allowed, as long as they are not
+published, distributed, sold, or represented as an official version.
+
+Third-party data, APIs, manifests, tools, or platforms referenced by this
+project remain under their own licenses and terms. This license applies only to
+AchievementBackup files created and maintained by Yuykkk.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+A PARTICULAR PURPOSE, NON-INFRINGEMENT, OR DATA SAFETY. USE THIS SOFTWARE AT
+YOUR OWN RISK. Yuykkk is not responsible for data loss, corrupted saves,
+Steam/game issues, or any damages resulting from use, misuse, modification, or
+distribution of this software.
+
+For permission requests, contact:
+
+- GitHub: https://github.com/Yuykkk
+- Discord: yukiyot
