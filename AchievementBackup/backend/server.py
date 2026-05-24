@@ -1643,6 +1643,7 @@ def trigger_external_restore(backup_folder_name):
     steam_exe = os.path.join(STEAM_PATH, "steam.exe")
     temp_bat = os.path.join(os.environ["TEMP"], "achievementbackup_restore.bat")
     flag_file = os.path.join(BACKUP_ROOT, "restore_success.flag")
+    failure_file = os.path.join(BACKUP_ROOT, RESTORE_FAILURE_FILE)
     terminal_color = restore_terminal_color()
     def _b(value):
         return str(value).replace("%", "%%")
@@ -1696,6 +1697,8 @@ def trigger_external_restore(backup_folder_name):
         "set /a FAIL=0",
         "set /a TOTAL=0",
         "set /a FILE_DONE=0",
+        f'set "FAILLOG={_b(failure_file)}"',
+        'del /F /Q "%FAILLOG%" >nul 2>&1',
         f"set /a FILE_TOTAL={max(restore_file_total, 1)}",
         "set /a STEP=0",
         "set /a STEPS=8",
@@ -1733,9 +1736,10 @@ def trigger_external_restore(backup_folder_name):
                 'if exist "%SRC%" (',
                 '  if exist "%DST%" attrib -R "%DST%" >nul 2>&1',
                 '  copy /Y "%SRC%" "%DST%" >nul',
-                '  if errorlevel 1 (set /a FAIL+=1) else (set /a OK+=1)',
+                '  if errorlevel 1 (set /a FAIL+=1 & echo COPY^|saves externos^|%DST%^|%SRC%>>"%FAILLOG%") else (set /a OK+=1)',
                 ') else (',
                 '  set /a FAIL+=1',
+                '  echo ORIGEM AUSENTE^|saves externos^|%DST%^|%SRC%>>"%FAILLOG%"',
                 ')',
                 "set /a FILE_DONE+=1",
             ])
@@ -1804,7 +1808,7 @@ def trigger_external_restore(backup_folder_name):
         "  for %%D in (\"!OUT!\") do if not exist \"%%~dpD\" mkdir \"%%~dpD\" >nul 2>&1",
         "  if exist \"!OUT!\" attrib -R \"!OUT!\" >nul 2>&1",
         "  copy /Y \"%%F\" \"!OUT!\" >nul",
-        "  if errorlevel 1 (set /a FAIL+=1) else (set /a OK+=1)",
+        "  if errorlevel 1 (set /a FAIL+=1 & echo COPY^|%LABEL%^|!OUT!^|%%F>>\"%FAILLOG%\") else (set /a OK+=1)",
         "  set /a FILE_DONE+=1",
         "  call :progress \"%LABEL% - !REL!\"",
         ")",
