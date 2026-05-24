@@ -1427,7 +1427,6 @@ def launch_external_snapshot_restore(appid, game_name, files, create_safety_back
     token = f"achievementbackup_snapshot_restore_{int(time.time())}"
     bat_path = os.path.join(temp_dir, token + ".bat")
     terminal_color = restore_terminal_color()
-    failure_file = os.path.join(BACKUP_ROOT, "restore_failures.log")
     safe_game = re.sub(r"[^A-Za-z0-9._-]+", "_", str(game_name or appid)).strip("_") or str(appid)
     safety_root = os.path.join(
         BACKUP_ROOT,
@@ -1504,8 +1503,6 @@ def launch_external_snapshot_restore(appid, game_name, files, create_safety_back
         "set /a COPYOK=0",
         "set /a REMOVED=0",
         "set /a FAIL=0",
-        f'set "FAILLOG={bat_value(failure_file)}"',
-        'del /F /Q "%FAILLOG%" >nul 2>&1',
         "set /a STEP=0",
         f"set /a STEPS={max(len(files) + 3, 4)}",
     ]
@@ -1563,7 +1560,7 @@ def launch_external_snapshot_restore(appid, game_name, files, create_safety_back
                 'if exist "%DST%" (',
                 '  attrib -R "%DST%" >nul 2>&1',
                 '  del /F /Q "%DST%" >nul 2>&1',
-                '  if errorlevel 1 (set /a FAIL+=1 & echo DELETE^|captura^|%DST%^|>>"%FAILLOG%" & echo FALHOU AO REMOVER: "%DST%") else (set /a OK+=1 & set /a REMOVED+=1 & echo REMOVIDO: "%DST%" & if "%CLEANUPCLOUD%"=="1" call :remove_external_cloud "%DSTDIR%" "%PRUNESTOP%" & call :remove_created_dir "%CREATEDDIR%" "%CREATEDSTOP%" & call :prune_empty_dirs "%DSTDIR%" "%PRUNESTOP%")',
+                '  if errorlevel 1 (set /a FAIL+=1 & echo FALHOU AO REMOVER: "%DST%") else (set /a OK+=1 & set /a REMOVED+=1 & echo REMOVIDO: "%DST%" & if "%CLEANUPCLOUD%"=="1" call :remove_external_cloud "%DSTDIR%" "%PRUNESTOP%" & call :remove_created_dir "%CREATEDDIR%" "%CREATEDSTOP%" & call :prune_empty_dirs "%DSTDIR%" "%PRUNESTOP%")',
                 ') else (',
                 '  set /a OK+=1',
                 '  echo JA NAO EXISTIA: "%DST%"',
@@ -1599,10 +1596,9 @@ def launch_external_snapshot_restore(appid, game_name, files, create_safety_back
             ])
         lines.extend([
             '  copy /Y "%SRC%" "%DST%" >nul',
-            '  if errorlevel 1 (set /a FAIL+=1 & echo COPY^|captura^|%DST%^|%SRC%>>"%FAILLOG%" & echo FALHOU: "%DST%") else (set /a OK+=1 & set /a COPYOK+=1 & echo OK: "%DST%")',
+            '  if errorlevel 1 (set /a FAIL+=1 & echo FALHOU: "%DST%") else (set /a OK+=1 & set /a COPYOK+=1 & echo OK: "%DST%")',
             ') else (',
             '  set /a FAIL+=1',
-            '  echo ORIGEM AUSENTE^|captura^|%DST%^|%SRC%>>"%FAILLOG%"',
             '  echo FALTOU ORIGEM: "%SRC%"',
             ')',
         ])
