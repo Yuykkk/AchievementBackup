@@ -61,9 +61,13 @@ Essa função é útil para:
 - guardar uma cópia fora da pasta da Steam;
 - restaurar capturas depois de reinstalar o plugin.
 
-## Atualização automática
+## Atualização
 
-O plugin verifica este repositório periodicamente. Quando encontra uma versão mais nova em `plugin.json`, baixa o pacote do GitHub e atualiza os arquivos do plugin preservando:
+O plugin verifica este repositório quando a Steam abre e depois periodicamente. Quando encontra uma versão mais nova em `plugin.json`, ele mostra a versão instalada e a versão disponível, pergunta se você quer atualizar naquele momento e só então baixa o pacote do GitHub.
+
+Depois da instalação, a Steam é reiniciada para carregar os arquivos novos. Na próxima abertura, o plugin mostra uma mensagem confirmando de qual versão para qual versão ele atualizou.
+
+Durante a atualização, ele preserva:
 
 - `profile`;
 - `backups`;

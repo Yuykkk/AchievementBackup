@@ -13,6 +13,7 @@ import time
 import mimetypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from config import BACKUP_ROOT, PLUGIN_ROOT, SERVER_PORT, SESSION_STATE_FILE, STEAM_PATH, default_backup_root, get_backup_root, ignored_appids, is_ignored_appid, load_user_config, refresh_backup_root, restore_terminal_color, save_user_config, user_config_file, pending_file
+from updater import check_update_status, consume_update_result, install_confirmed_update
 
 EXPORT_TASKS = {}
 PLUGIN_INSTANCE = None
@@ -930,6 +931,20 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
                 "copiedCount": copied_count,
             }).encode())
 
+        elif self.path.startswith('/update/status'):
+            try:
+                force = "force=1" in self.path
+                _send_json(self, check_update_status(force=force))
+            except Exception as e:
+                _send_json(self, {"ok": False, "available": False, "message": str(e)}, 500)
+
+        elif self.path == '/update/result':
+            try:
+                result = consume_update_result()
+                _send_json(self, {"ok": True, "updated": bool(result), "result": result or {}})
+            except Exception as e:
+                _send_json(self, {"ok": False, "updated": False, "message": str(e)}, 500)
+
         elif self.path == '/list':
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -947,6 +962,11 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
             config = load_user_config()
             config["backup_default_path"] = default_backup_root()
             config["backup_current_path"] = get_backup_root()
+            try:
+                with open(os.path.join(PLUGIN_ROOT, "plugin.json"), "r", encoding="utf-8") as f:
+                    config["plugin_version"] = json.load(f).get("version") or "0.0.0"
+            except:
+                config["plugin_version"] = "0.0.0"
             self.wfile.write(json.dumps(config).encode())
 
         elif self.path == '/settings/pick-backup-folder':
@@ -1391,6 +1411,13 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'{"status": "accepted"}')
             threading.Thread(target=trigger_external_restore, args=(backup_name,), daemon=True).start()
+        elif self.path == '/update/install':
+            try:
+                result = install_confirmed_update(restart=True)
+                _send_json(self, result)
+            except Exception as e:
+                _log_event("ERROR", f"/update/install failed: {e}")
+                _send_json(self, {"ok": False, "installed": False, "message": str(e)}, 500)
         elif self.path.startswith('/delete/'):
             backup_name = self.path.replace('/delete/', '')
             backup_name = urllib.parse.unquote(backup_name)

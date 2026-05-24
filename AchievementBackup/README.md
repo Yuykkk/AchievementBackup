@@ -10,7 +10,7 @@ Plugin para Millennium/Steam criado por **Yuykkk** para proteger dados locais da
 - Importação e exportação em ZIP.
 - Pasta de backup configurável.
 - Temas de cor.
-- Atualização automática pelo GitHub.
+- Verificação de atualização pelo GitHub com confirmação antes de instalar.
 
 ## Instalação
 

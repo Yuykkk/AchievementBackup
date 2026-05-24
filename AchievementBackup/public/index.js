@@ -24,6 +24,9 @@
         busy: false,
         pendingPromptOpen: false,
         pendingPromptKey: "",
+        updatePromptOpen: false,
+        updatePromptKey: "",
+        updateStatus: {},
         liveTimer: 0,
         editingUntil: 0,
     };
@@ -240,7 +243,7 @@
             .ab-dialog { width:min(760px, calc(100vw - 28px)); max-height:calc(100vh - 28px); display:grid; grid-template-rows:auto minmax(0, 1fr) auto; border:1px solid var(--ab-line); background:var(--ab-panel); border-radius:8px; overflow:hidden; box-shadow:0 30px 80px rgba(0,0,0,.55); }
             .ab-dialog-head { padding:15px 16px; border-bottom:1px solid var(--ab-line); display:flex; justify-content:space-between; align-items:center; }
             .ab-dialog-head p { margin:5px 0 0; color:var(--ab-muted); font-size:12px; }
-            .ab-dialog-body { padding:16px; color:var(--ab-muted); line-height:1.55; overflow:auto; min-height:0; }
+            .ab-dialog-body { padding:16px; color:var(--ab-muted); line-height:1.55; overflow:auto; min-height:0; white-space:pre-line; }
             .ab-dialog-body strong { color:var(--ab-text); }
             .ab-detail-list { display:grid; gap:8px; margin-top:12px; }
             .ab-detail-item { border:1px solid var(--ab-line); background:#071016; border-radius:7px; padding:10px; }
@@ -660,13 +663,14 @@
     }
 
     async function refreshData() {
-        const [settings, backups, snapshots, stats, session, apps] = await Promise.all([
+        const [settings, backups, snapshots, stats, session, apps, updateStatus] = await Promise.all([
             json("/settings").catch(() => ({})),
             json("/list").catch(() => []),
             json("/achievements/list").catch(() => []),
             json("/stats").catch(() => ({})),
             json("/session").catch(() => ({})),
             json("/installed-apps").catch(() => ({ apps: [] })),
+            json("/update/status").catch(() => ({})),
         ]);
         const lockedTheme = currentTheme();
         const incomingSettings = settings || {};
@@ -679,6 +683,7 @@
         state.stats = stats || {};
         state.session = session || {};
         state.apps = Array.isArray(apps.apps) ? apps.apps : [];
+        state.updateStatus = updateStatus || {};
     }
 
     function currentTheme() {
@@ -709,7 +714,7 @@
         return `
             <div class="ab-shell">
                 <aside class="ab-side">
-                    <div class="ab-brand"><strong>AchievementBackup</strong><span>Painel local da Steam</span></div>
+                    <div class="ab-brand"><strong>AchievementBackup</strong><span>Painel local da Steam • v${esc(pluginVersion())}</span></div>
                     <nav class="ab-nav">
                         ${tabs.map(([id, label]) => `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}">${label}</button>`).join("")}
                     </nav>
@@ -732,6 +737,10 @@
 
     function titleForTab() {
         return { overview: "Visão geral", backups: "Backups completos", captures: "Capturas por jogo", games: "Jogos instalados", ignored: "Apps ignorados", settings: "Configurações" }[state.tab] || "AchievementBackup";
+    }
+
+    function pluginVersion() {
+        return (state.updateStatus && state.updateStatus.localVersion) || (state.settings && state.settings.plugin_version) || "2.1.0";
     }
 
     function subtitleForTab() {
@@ -798,6 +807,7 @@
                 <span class="ab-badge">${icon.folder} Livre no disco: ${fmtBytes(state.stats.disk_free_bytes)}</span>
                 <span class="ab-badge">${icon.save} Ultimo backup: ${esc(lastBackup ? backupTitle(lastBackup) : "nenhum")}</span>
                 <span class="ab-badge">${icon.game} Ultima captura: ${esc(lastSnapshot ? snapshotGameName(lastSnapshot) : "nenhuma")}</span>
+                <span class="ab-badge">${icon.info} Versao ${esc(pluginVersion())}</span>
             </div>
             <div class="ab-section">
                 <div class="ab-section-head"><strong>O que pode ser restaurado</strong></div>
@@ -1622,13 +1632,70 @@
         }, 1600);
     }
 
+    async function installUpdate(status) {
+        const fromVersion = status.localVersion || pluginVersion();
+        const toVersion = status.remoteVersion || "nova versao";
+        const ok = await confirmDialog(
+            "Atualizacao disponivel",
+            `Sua versao: ${fromVersion}\nNova versao: ${toVersion}\n\nO plugin vai baixar a atualizacao do GitHub e reiniciar a Steam no final para carregar os arquivos novos. Quer atualizar agora?`,
+            "Atualizar agora"
+        );
+        if (!ok) return;
+        const progress = progressDialog("Atualizando AchievementBackup", `Baixando e instalando a versao ${toVersion}...`);
+        try {
+            progress.update("Baixando pacote do GitHub...", 25);
+            const result = await post("/update/install", {});
+            progress.update("Atualizacao instalada. A Steam vai reiniciar agora...", 100);
+            toast(result.message || `Atualizado de ${fromVersion} para ${toVersion}.`);
+            setTimeout(() => progress.close(), 1200);
+        } catch (e) {
+            progress.close();
+            toast(e.message || "Falha ao atualizar.");
+        }
+    }
+
+    async function checkUpdateResult() {
+        try {
+            const data = await json("/update/result");
+            if (!data.updated || !data.result) return;
+            const result = data.result;
+            const fromVersion = result.fromVersion || "?";
+            const toVersion = result.toVersion || pluginVersion();
+            toast(`AchievementBackup atualizado com sucesso: ${fromVersion} -> ${toVersion}.`);
+        } catch (e) {}
+    }
+
+    function startUpdateWatcher() {
+        const tick = async (force) => {
+            if (state.updatePromptOpen) return;
+            try {
+                const status = await json(`/update/status${force ? "?force=1" : ""}`);
+                state.updateStatus = status || {};
+                if (!status || !status.available) return;
+                const key = `${status.localVersion || ""}->${status.remoteVersion || ""}`;
+                if (state.updatePromptKey === key) return;
+                state.updatePromptOpen = true;
+                state.updatePromptKey = key;
+                try {
+                    await installUpdate(status);
+                } finally {
+                    state.updatePromptOpen = false;
+                }
+            } catch (e) {}
+        };
+        setTimeout(() => tick(true), 5000);
+        setInterval(() => tick(false), 60000);
+    }
+
     function boot() {
         if (!document.body) {
             setTimeout(boot, 500);
             return;
         }
         injectFab();
+        checkUpdateResult();
         startPendingWatcher();
+        startUpdateWatcher();
         setInterval(injectFab, 3000);
         startLiveRefresh();
     }
