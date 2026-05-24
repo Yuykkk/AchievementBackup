@@ -1,0 +1,26 @@
+{
+  "name": "AchievementBackup",
+  "purpose": "Guardar preferencias e decisoes do usuario fora do codigo do plugin.",
+  "ui": {
+    "confirmations": "Usar modais proprios do AchievementBackup em vez de alerts/confirms nativos da Steam.",
+    "restore_capture_message": "Explicar que capturas restauram somente o jogo selecionado e nao afetam outros jogos.",
+    "technical_sheet": "Manter botao Ficha Tecnica para explicar de onde vem userdata, stats, saves, stplug-in e config lua."
+  },
+  "backup_behavior": {
+    "default_mode": "semi",
+    "automatic_requires_warning": true,
+    "captures_are_manual": true,
+    "capture_restore_safety": "Antes de sobrescrever arquivos do jogo, criar copia em backups/restore-safety."
+  },
+  "saved_preferences": [
+    "theme",
+    "backup_mode",
+    "hotkey",
+    "broad_external_scan",
+    "backup_all_external_saves",
+    "use_save_location_api",
+    "ignored_appids",
+    "auto_mode_warning_ack",
+    "backup_path"
+  ]
+}

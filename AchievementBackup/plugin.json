@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/SteamClientHomebrew/Millennium/main/src/sys/plugin-schema.json",
+  "name": "achievementbackup",
+  "common_name": "AchievementBackup",
+  "description": "Backup local de userdata, stats, saves e capturas por jogo.",
+  "author": "Yuykkk",
+  "version": "2.1.0",
+  "useBackend": true,
+  "backend": "backend",
+  "frontend": "frontend",
+  "include": [
+    "public"
+  ]
+}

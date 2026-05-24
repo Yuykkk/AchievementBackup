@@ -1,0 +1,11 @@
+{
+  "backup_mode": "semi",
+  "semi_auto": true,
+  "theme": "blue",
+  "use_save_location_api": true,
+  "broad_external_scan": false,
+  "backup_all_external_saves": false,
+  "auto_mode_warning_ack": false,
+  "ignored_appids": [],
+  "backup_path": ""
+}

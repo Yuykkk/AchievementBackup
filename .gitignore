@@ -1,0 +1,6 @@
+AchievementBackup/cache/
+AchievementBackup/logs/
+AchievementBackup/profile/user_config.json
+AchievementBackup/backend/__pycache__/
+AchievementBackup/backend/*.pyc
+*.pyc
