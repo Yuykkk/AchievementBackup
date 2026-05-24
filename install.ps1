@@ -7,15 +7,62 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if ([string]::IsNullOrWhiteSpace($SteamPath)) {
+function Test-SteamRoot {
+    param([string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) { return $false }
     try {
-        $SteamPath = (Get-ItemProperty -Path "HKCU:\Software\Valve\Steam" -Name "SteamPath").SteamPath
+        $full = [System.IO.Path]::GetFullPath(($Path -replace "/", "\"))
+        return (Test-Path (Join-Path $full "steam.exe")) -or (Test-Path (Join-Path $full "steamapps"))
     } catch {
-        $SteamPath = "C:\Program Files (x86)\Steam"
+        return $false
     }
 }
 
-$SteamPath = [System.IO.Path]::GetFullPath($SteamPath)
+function Find-SteamPath {
+    $candidates = New-Object System.Collections.Generic.List[string]
+
+    if (-not [string]::IsNullOrWhiteSpace($SteamPath)) {
+        $candidates.Add($SteamPath)
+    }
+
+    foreach ($regPath in @("HKCU:\Software\Valve\Steam", "HKLM:\SOFTWARE\WOW6432Node\Valve\Steam", "HKLM:\SOFTWARE\Valve\Steam")) {
+        try {
+            $props = Get-ItemProperty -Path $regPath -ErrorAction Stop
+            foreach ($name in @("SteamPath", "InstallPath")) {
+                if ($props.$name) { $candidates.Add($props.$name) }
+            }
+        } catch {}
+    }
+
+    try {
+        $proc = Get-Process steam -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($proc -and $proc.Path) {
+            $candidates.Add((Split-Path -Parent $proc.Path))
+        }
+    } catch {}
+
+    foreach ($path in @(
+        "$env:ProgramFiles(x86)\Steam",
+        "$env:ProgramFiles\Steam",
+        "C:\Steam",
+        "D:\steam",
+        "D:\Steam",
+        "E:\steam",
+        "E:\Steam"
+    )) {
+        if ($path) { $candidates.Add($path) }
+    }
+
+    foreach ($candidate in $candidates | Select-Object -Unique) {
+        if (Test-SteamRoot $candidate) {
+            return [System.IO.Path]::GetFullPath(($candidate -replace "/", "\"))
+        }
+    }
+
+    throw "Nao consegui encontrar a pasta da Steam automaticamente. Rode novamente com -SteamPath `"D:\steam`"."
+}
+
+$SteamPath = Find-SteamPath
 $pluginsDir = Join-Path $SteamPath "plugins"
 $target = Join-Path $pluginsDir $PluginName
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("achievementbackup-install-" + [guid]::NewGuid().ToString("N"))
@@ -23,7 +70,7 @@ $zip = Join-Path $tmp "plugin.zip"
 $url = "https://github.com/$Repo/archive/refs/heads/$Branch.zip"
 
 Write-Host "AchievementBackup installer"
-Write-Host "Steam: $SteamPath"
+Write-Host "Steam detectada: $SteamPath"
 Write-Host "Destino: $target"
 
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null

@@ -1,16 +1,6 @@
 # AchievementBackup
 
-Plugin para Millennium/Steam criado por **Yuykkk** para proteger dados locais da Steam, conquistas, saves e capturas por jogo.
-
-## Funções
-
-- Backup completo da Steam.
-- Capturas por jogo usando AppID.
-- Apps ignorados com preferências salvas.
-- Importação e exportação em ZIP.
-- Pasta de backup configurável.
-- Temas de cor.
-- Verificação de atualização pelo GitHub com confirmação antes de instalar.
+Plugin para **Millennium/Steam** criado por **Yuykkk** para proteger dados locais da Steam, conquistas, saves e capturas por jogo.
 
 ## Instalação
 
@@ -18,23 +8,25 @@ Plugin para Millennium/Steam criado por **Yuykkk** para proteger dados locais da
 irm "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1" | iex
 ```
 
-Com Steam em outro caminho:
+O instalador detecta automaticamente a pasta da Steam pelo registro do Windows, processo aberto e caminhos comuns, inclusive instalações em outro disco.
 
-```powershell
-$p="$env:TEMP\AchievementBackup-install.ps1"; iwr "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1" -OutFile $p -UseB; powershell -NoProfile -ExecutionPolicy Bypass -File $p -SteamPath "D:\steam"
-```
+## Funções
 
-## O que pode ser salvo
-
-- `appcache/stats`: conquistas e estatísticas locais.
-- `userdata`: saves e preferências da conta Steam.
-- `config/stplug-in`: lista e configurações locais dos jogos.
-- Caminhos conhecidos de saves no Windows, como `Documentos` e `AppData`, quando o manifest Ludusavi/PCGamingWiki estiver ativado.
+- Backup completo da Steam.
+- Capturas por jogo usando AppID.
+- Restore com aviso de sucesso ou falha quando a Steam abre novamente.
+- Apps ignorados com preferências salvas.
+- Importação e exportação em ZIP.
+- Pasta de backup configurável.
+- Temas de cor.
+- Verificação de atualização pelo GitHub com confirmação antes de instalar.
 
 ## Créditos
+
+Criado por **Yuykkk**.
+
+Projeto desenvolvido com apoio de IA para acelerar código, textos e interface, com direção, testes e publicação feitos por Yuykkk.
 
 - Ludusavi Manifest: https://github.com/mtkennerly/ludusavi-manifest
 - PCGamingWiki: https://www.pcgamingwiki.com/
 - Steam Web/Store metadata para nomes e imagens dos jogos.
-
-Criado por **Yuykkk**.

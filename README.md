@@ -1,85 +1,81 @@
 # AchievementBackup
 
-Um plugin para Millennium/Steam criado por **Yuykkk** para proteger dados locais da Steam, conquistas, saves e capturas por jogo.
+**AchievementBackup** é um plugin para **Millennium/Steam** criado por **Yuykkk** para proteger dados locais da Steam, conquistas, saves e capturas por jogo.
 
-AchievementBackup foi feito para quem quer formatar o PC, reinstalar a Steam, testar jogos ou guardar estados importantes sem depender só da nuvem.
-
-## Destaques
-
-- **Backup completo da Steam** com dados locais importantes.
-- **Capturas por jogo** usando AppID, para restaurar só um jogo específico.
-- **Lista de apps ignorados** com salvamento automático das preferências.
-- **Importação e exportação em ZIP** para levar seus backups para outro PC.
-- **Pasta de backup configurável**, ou uso do caminho padrão dentro do plugin.
-- **Temas de cor** para personalizar o painel.
-- **Atualização automática pelo GitHub**.
-- **Imagens dos jogos** usando metadados públicos da Steam.
+Ele foi feito para quem quer formatar o PC, reinstalar a Steam, trocar de disco, testar jogos ou guardar um estado importante sem depender apenas da nuvem.
 
 ## Instalação rápida
 
 Requisito: Steam com [Millennium](https://steambrew.app/) instalado.
 
-Abra o PowerShell e execute:
+Abra o PowerShell e rode **um único comando**:
 
 ```powershell
 irm "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1" | iex
 ```
 
-Se sua Steam estiver em outro caminho:
+O instalador tenta encontrar a pasta da Steam automaticamente, inclusive instalações fora do `C:`, usando registro do Windows, processo da Steam aberto e caminhos comuns como `D:\steam`.
 
-```powershell
-$p="$env:TEMP\AchievementBackup-install.ps1"; iwr "https://raw.githubusercontent.com/Yuykkk/AchievementBackup/main/install.ps1" -OutFile $p -UseB; powershell -NoProfile -ExecutionPolicy Bypass -File $p -SteamPath "D:\steam"
-```
+Depois da instalação, reinicie a Steam e abra o AchievementBackup pelo botão do plugin.
 
-Depois reinicie a Steam e abra o AchievementBackup pelo botão do plugin.
+## Recursos
 
-Se o GitHub retornar `404`, deixe o repositório público. O instalador e o auto update precisam acessar os arquivos pelo GitHub raw.
-
-## O que o plugin salva
-
-AchievementBackup organiza dois tipos principais de proteção:
-
-| Tipo | O que faz |
+| Recurso | Descrição |
 | --- | --- |
-| Backup completo | Salva o pacote principal da Steam, incluindo conquistas, estatísticas, saves e configurações locais. |
-| Captura por jogo | Salva somente os arquivos ligados a um AppID, ideal para restaurar um jogo sem mexer no resto. |
+| Backup completo | Salva um pacote amplo dos dados locais importantes da Steam. |
+| Captura por jogo | Salva somente os arquivos ligados a um AppID específico. |
+| Restore guiado | Fecha a Steam, aplica os arquivos e mostra o resultado quando ela abre de novo. |
+| Apps ignorados | Evita capturas automáticas em jogos/apps escolhidos por você. |
+| Importar e exportar | Gera ou importa ZIPs com backups completos e capturas por jogo. |
+| Pasta configurável | Permite salvar os backups no caminho padrão do plugin ou em outro disco. |
+| Temas de cor | Personaliza o painel dentro da Steam. |
+| Atualização pelo GitHub | Verifica versões novas, pergunta antes de atualizar e mostra o resultado depois. |
 
-Fontes usadas no backup:
+## O que pode ser salvo
+
+AchievementBackup trabalha com duas ideias:
+
+- **Backup completo**: bom antes de formatar, reinstalar a Steam ou mexer em arquivos grandes.
+- **Captura por jogo**: boa para salvar/restaurar só um jogo sem tocar no resto da biblioteca.
+
+Fontes protegidas:
 
 - `appcache/stats`: conquistas e estatísticas locais.
 - `userdata`: saves, preferências e dados vinculados à conta Steam.
 - `config/stplug-in`: lista, estado e configurações locais usadas pela Steam.
 - Caminhos conhecidos de saves no Windows, como `Documentos` e `AppData`, quando o manifest Ludusavi/PCGamingWiki estiver ativado.
 
-## Importar e exportar
+## Atualizações
 
-Use **Exportar tudo** para gerar um arquivo `.zip` com backups completos e capturas por jogo.
+Quando a Steam abre, o plugin verifica se existe uma versão mais nova no GitHub.
 
-Use **Importar** para adicionar um `.zip` exportado anteriormente sem apagar seus backups atuais.
+Se encontrar, ele mostra:
 
-Essa função é útil para:
+- versão instalada;
+- versão disponível;
+- confirmação antes de baixar;
+- aviso depois que a Steam reinicia.
 
-- mover dados para outro PC;
-- guardar uma cópia fora da pasta da Steam;
-- restaurar capturas depois de reinstalar o plugin.
-
-## Atualização
-
-O plugin verifica este repositório quando a Steam abre e depois periodicamente. Quando encontra uma versão mais nova em `plugin.json`, ele mostra a versão instalada e a versão disponível, pergunta se você quer atualizar naquele momento e só então baixa o pacote do GitHub.
-
-Depois da instalação, a Steam é reiniciada para carregar os arquivos novos. Na próxima abertura, o plugin mostra uma mensagem confirmando de qual versão para qual versão ele atualizou.
-
-Durante a atualização, ele preserva:
+O plugin preserva seus dados locais durante a atualização:
 
 - `profile`;
 - `backups`;
 - `logs`;
 - `cache`;
-- configurações locais.
+- configurações do usuário.
 
-Para o auto update funcionar, este repositório precisa estar público ou acessível pelo GitHub raw.
+Também existe um botão em **Configurações** para checar atualização manualmente.
 
-## Créditos da API/manifest
+## Créditos
+
+Criado por **Yuykkk**.
+
+- GitHub: https://github.com/Yuykkk
+- Discord: `yukiyot`
+
+Este projeto foi desenvolvido com apoio de IA para acelerar implementação, revisão de código, organização de textos e melhorias de interface. As decisões, direção do projeto, testes e publicação são de autoria de **Yuykkk**.
+
+### Dados e APIs públicas
 
 AchievementBackup usa dados públicos para localizar saves e exibir informações dos jogos:
 
@@ -88,13 +84,6 @@ AchievementBackup usa dados públicos para localizar saves e exibir informaçõe
 - Steam Web/Store metadata: nomes e imagens públicas dos jogos.
 
 O manifest do Ludusavi é distribuído sob licença MIT. Consulte o repositório original para detalhes.
-
-## Autor
-
-Criado por **Yuykkk**.
-
-- GitHub: https://github.com/Yuykkk
-- Discord: `yukiyot`
 
 ## Aviso
 
