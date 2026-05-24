@@ -1709,12 +1709,22 @@
                 data.removedCount != null ? `${data.removedCount} removidos` : "",
                 data.failCount != null && Number(data.failCount) > 0 ? `${data.failCount} falhas` : "",
             ].filter(Boolean).join(" | ");
+            const failures = Array.isArray(data.failuresDetail) ? data.failuresDetail : [];
+            const failureText = failures.slice(0, 8).map((item, index) => {
+                const kind = item.kind || "Arquivo";
+                const reason = item.reason || "Falha";
+                const path = item.path || item.source || "caminho não informado";
+                const impact = item.impact || "Arquivo protegido pelo backup.";
+                return `${index + 1}. ${kind} - ${reason}\n${path}\n${impact}`;
+            }).join("\n\n");
+            const hiddenFailures = failures.length > 8 ? `\n\nE mais ${failures.length - 8} falhas.` : "";
             const message = [
                 hasFailures
                     ? "A restauração terminou, mas alguns arquivos não foram aplicados. O restante foi restaurado normalmente."
                     : "A restauração terminou e a Steam foi aberta novamente.",
                 data.summary ? `Restaurado: ${data.summary}.` : "",
                 counts,
+                failureText ? `Arquivos com erro:\n${failureText}${hiddenFailures}` : "",
                 data.safetyBackup ? `Cópia de segurança: ${data.safetyBackup}` : "",
                 hasFailures ? "Se algum save ficou faltando, tente restaurar novamente com a Steam fechada e verifique permissões do Windows/Documentos/AppData." : "",
             ].filter(Boolean).join("\n");

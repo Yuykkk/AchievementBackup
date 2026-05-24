@@ -22,6 +22,7 @@ ACCOUNT_CACHE = None
 APP_IMAGE_CACHE = {}
 BACKUP_PREFIX = "AchievementBackup-"
 META_FILE = "achievementbackup_meta.json"
+RESTORE_FAILURE_FILE = "restore_failures.log"
 
 class AchievementBackupThreadingHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = True
@@ -46,6 +47,58 @@ def _send_json(handler, payload, status=200):
     handler.send_header('Connection', 'close')
     handler.end_headers()
     handler.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+
+def _restore_failure_kind(path, label=""):
+    text = f"{label} {path}".replace("\\", "/").lower()
+    if "userdata/" in text:
+        if "/remote/" in text or "/saves/" in text or "save" in text:
+            return "Save Steam", "Pode ser progresso/configuração do jogo dentro de userdata."
+        return "Userdata", "Dados da conta Steam ou do AppID."
+    if "appcache/stats" in text or "appcache_stats" in text or "/stats/" in text:
+        return "Conquistas/stats", "Pode afetar conquistas ou estatísticas locais."
+    if "stplug-in" in text:
+        return "Config dos jogos", "Configuração/lista local usada pela Steam para jogos."
+    if "depotcache" in text:
+        return "Cache da Steam", "Normalmente é menos crítico; a Steam pode recriar parte disso."
+    if "config/lua" in text or "/lua/" in text:
+        return "Config local", "Arquivo de configuração local."
+    if "documents" in text or "documentos" in text or "appdata" in text or "saved games" in text:
+        return "Save externo", "Save ou configuração fora da pasta da Steam."
+    return "Arquivo", "Arquivo protegido pelo backup."
+
+def _read_restore_failures():
+    path = os.path.join(BACKUP_ROOT, RESTORE_FAILURE_FILE)
+    failures = []
+    try:
+        if not os.path.exists(path):
+            return failures
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                raw = line.strip()
+                if not raw:
+                    continue
+                parts = raw.split("|")
+                reason = parts[0] if len(parts) > 0 else "Falha"
+                label = parts[1] if len(parts) > 1 else ""
+                target = parts[2] if len(parts) > 2 else raw
+                source = parts[3] if len(parts) > 3 else ""
+                kind, impact = _restore_failure_kind(target or source, label)
+                failures.append({
+                    "reason": reason,
+                    "label": label,
+                    "path": target or source,
+                    "source": source,
+                    "kind": kind,
+                    "impact": impact,
+                })
+    except:
+        pass
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except:
+        pass
+    return failures[:20]
 
 def _sync_backup_root():
     global BACKUP_ROOT
@@ -876,6 +929,7 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
             safety_backup = None
             removed_count = None
             copied_count = None
+            failures_detail = []
             if os.path.exists(flag_file):
                 was_restored = True
                 try:
@@ -917,6 +971,7 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
                     pass
                 try: os.remove(flag_file) 
                 except: pass
+                failures_detail = _read_restore_failures()
             self.wfile.write(json.dumps({
                 "restored": was_restored,
                 "type": restore_type,
@@ -929,6 +984,7 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
                 "safetyBackup": safety_backup,
                 "removedCount": removed_count,
                 "copiedCount": copied_count,
+                "failuresDetail": failures_detail,
             }).encode())
 
         elif self.path.startswith('/update/status'):
@@ -1554,6 +1610,7 @@ def trigger_external_restore(backup_folder_name):
     steam_exe = os.path.join(STEAM_PATH, "steam.exe")
     temp_bat = os.path.join(os.environ["TEMP"], "achievementbackup_restore.bat")
     flag_file = os.path.join(BACKUP_ROOT, "restore_success.flag")
+    failure_file = os.path.join(BACKUP_ROOT, RESTORE_FAILURE_FILE)
     terminal_color = restore_terminal_color()
     def _b(value):
         return str(value).replace("%", "%%")
@@ -1607,6 +1664,8 @@ def trigger_external_restore(backup_folder_name):
         "set /a FAIL=0",
         "set /a TOTAL=0",
         "set /a FILE_DONE=0",
+        f'set "FAILLOG={_b(failure_file)}"',
+        'del /F /Q "%FAILLOG%" >nul 2>&1',
         f"set /a FILE_TOTAL={max(restore_file_total, 1)}",
         "set /a STEP=0",
         "set /a STEPS=8",
@@ -1644,9 +1703,10 @@ def trigger_external_restore(backup_folder_name):
                 'if exist "%SRC%" (',
                 '  if exist "%DST%" attrib -R "%DST%" >nul 2>&1',
                 '  copy /Y "%SRC%" "%DST%" >nul',
-                '  if errorlevel 1 (set /a FAIL+=1) else (set /a OK+=1)',
+                '  if errorlevel 1 (set /a FAIL+=1 & echo COPY^|saves externos^|%DST%^|%SRC%>>"%FAILLOG%") else (set /a OK+=1)',
                 ') else (',
                 '  set /a FAIL+=1',
+                '  echo ORIGEM AUSENTE^|saves externos^|%DST%^|%SRC%>>"%FAILLOG%"',
                 ')',
                 "set /a FILE_DONE+=1",
             ])
@@ -1715,7 +1775,7 @@ def trigger_external_restore(backup_folder_name):
         "  for %%D in (\"!OUT!\") do if not exist \"%%~dpD\" mkdir \"%%~dpD\" >nul 2>&1",
         "  if exist \"!OUT!\" attrib -R \"!OUT!\" >nul 2>&1",
         "  copy /Y \"%%F\" \"!OUT!\" >nul",
-        "  if errorlevel 1 (set /a FAIL+=1) else (set /a OK+=1)",
+        "  if errorlevel 1 (set /a FAIL+=1 & echo COPY^|%LABEL%^|!OUT!^|%%F>>\"%FAILLOG%\") else (set /a OK+=1)",
         "  set /a FILE_DONE+=1",
         "  call :progress \"%LABEL% - !REL!\"",
         ")",
