@@ -50,6 +50,8 @@ def _send_json(handler, payload, status=200):
 
 def _restore_failure_kind(path, label=""):
     text = f"{label} {path}".replace("\\", "/").lower()
+    if "start steam" in text or ("steam.exe" in text and "steam" in str(label).lower()):
+        return "Reinício da Steam", "Os arquivos podem ter sido restaurados, mas a Steam não abriu automaticamente."
     if "userdata/" in text:
         if "/remote/" in text or "/saves/" in text or "save" in text:
             return "Save Steam", "Pode ser progresso/configuração do jogo dentro de userdata."
@@ -99,6 +101,37 @@ def _read_restore_failures():
     except:
         pass
     return failures[:20]
+
+def _resolve_steam_exe():
+    candidates = [os.path.join(STEAM_PATH, "steam.exe")]
+    try:
+        import winreg
+        for hive, key_path in (
+            (winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam"),
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam"),
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Valve\Steam"),
+        ):
+            try:
+                key = winreg.OpenKey(hive, key_path)
+                for value_name in ("SteamPath", "InstallPath"):
+                    try:
+                        value, _ = winreg.QueryValueEx(key, value_name)
+                        candidates.append(os.path.join(str(value).replace("/", "\\"), "steam.exe"))
+                    except:
+                        pass
+                winreg.CloseKey(key)
+            except:
+                pass
+    except:
+        pass
+    for path in candidates:
+        try:
+            full = os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
+            if os.path.isfile(full):
+                return full
+        except:
+            pass
+    return candidates[0]
 
 def _sync_backup_root():
     global BACKUP_ROOT
@@ -1607,7 +1640,8 @@ class AchievementBackupRequestHandler(BaseHTTPRequestHandler):
 
 def trigger_external_restore(backup_folder_name):
     backup_src = os.path.join(BACKUP_ROOT, backup_folder_name)
-    steam_exe = os.path.join(STEAM_PATH, "steam.exe")
+    steam_exe = _resolve_steam_exe()
+    steam_dir = os.path.dirname(steam_exe)
     temp_bat = os.path.join(os.environ["TEMP"], "achievementbackup_restore.bat")
     flag_file = os.path.join(BACKUP_ROOT, "restore_success.flag")
     failure_file = os.path.join(BACKUP_ROOT, RESTORE_FAILURE_FILE)
@@ -1712,11 +1746,13 @@ def trigger_external_restore(backup_folder_name):
             ])
     summary_text = ", ".join(restore_labels or ["backup da Steam"])
     bat_content.extend([
-        f'set "RESTORE_FLAG=backup|{_b(summary_text)}|%OK%|%TOTAL%|%FAIL%"',
-        f'echo(!RESTORE_FLAG! > "{flag_file}"',
         "set /a STEP=STEPS-1",
         "call :progress Registrando restore",
-        f'start "" "{_b(steam_exe)}"',
+        f'set "STEAM_EXE={_b(steam_exe)}"',
+        f'set "STEAM_DIR={_b(steam_dir)}"',
+        "call :startsteam",
+        f'set "RESTORE_FLAG=backup|{_b(summary_text)}|%OK%|%TOTAL%|%FAIL%"',
+        f'echo(!RESTORE_FLAG! > "{flag_file}"',
         "set /a STEP=STEPS",
         "call :progress Abrindo Steam novamente",
         "echo.",
@@ -1732,6 +1768,18 @@ def trigger_external_restore(backup_folder_name):
         "echo.",
         "timeout /t 8 /nobreak >nul",
         '(goto) 2>nul & del "%~f0"',
+        "",
+        ":startsteam",
+        "call :progress Abrindo Steam novamente",
+        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Start-Process -FilePath '%STEAM_EXE%' -WorkingDirectory '%STEAM_DIR%'\" >nul 2>&1",
+        "timeout /t 4 /nobreak >nul",
+        'tasklist /FI "IMAGENAME eq steam.exe" 2>nul | find /I "steam.exe" >nul && goto :eof',
+        'start "" /D "%STEAM_DIR%" "%STEAM_EXE%" >nul 2>&1',
+        "timeout /t 4 /nobreak >nul",
+        'tasklist /FI "IMAGENAME eq steam.exe" 2>nul | find /I "steam.exe" >nul && goto :eof',
+        'echo START STEAM^|Steam^|%STEAM_EXE%^|>>"%FAILLOG%"',
+        "set /a FAIL+=1",
+        "goto :eof",
         "",
         ":progress",
         "set \"MSG=%~1\"",
