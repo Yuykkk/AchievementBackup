@@ -794,7 +794,11 @@ def collect_files(appid, game_name=None):
         os.path.join(STEAM_PATH, "config", "stplug-in"),
         os.path.join(STEAM_PATH, "config", "lua-tools"),
         os.path.join(STEAM_PATH, "config", "luatools"),
+        os.path.join(STEAM_PATH, "millennium", "plugins", "luatools"),
+        os.path.join(STEAM_PATH, "millennium", "plugins", "LuaTools"),
         os.path.join(STEAM_PATH, "plugins", "LuaTools"),
+        os.path.join(STEAM_PATH, "plugins", "luatools"),
+        os.path.join(PLUGIN_ROOT, "..", "luatools"),
         os.path.join(PLUGIN_ROOT, "..", "LuaTools"),
     ]
     for root in lua_roots:

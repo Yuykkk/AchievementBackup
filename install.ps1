@@ -134,11 +134,75 @@ function Copy-PluginFiles {
     }
 }
 
+function Find-PluginsDir {
+    param([string]$Root)
+
+    $modern = Join-Path $Root "millennium\plugins"
+    $legacy = Join-Path $Root "plugins"
+
+    if (Test-Path (Join-Path $Root "millennium")) {
+        return $modern
+    }
+    if (Test-Path $modern) {
+        return $modern
+    }
+    return $legacy
+}
+
+function Preserve-PluginData {
+    param(
+        [string]$TempRoot,
+        [string]$Target,
+        [string]$LegacyTarget,
+        [string[]]$Names
+    )
+
+    foreach ($name in $Names) {
+        foreach ($base in @($Target, $LegacyTarget)) {
+            if ([string]::IsNullOrWhiteSpace($base)) { continue }
+            $existing = Join-Path $base $name
+            if (Test-Path $existing) {
+                $safeBase = (($base -replace "[:\\\/]", "_") -replace "__+", "_")
+                $saved = Join-Path $TempRoot ("preserve-" + $safeBase + "-" + $name)
+                Copy-Item -LiteralPath $existing -Destination $saved -Recurse -Force
+            }
+        }
+    }
+}
+
+function Restore-PluginData {
+    param(
+        [string]$TempRoot,
+        [string]$Target,
+        [string[]]$Names
+    )
+
+    foreach ($name in $Names) {
+        $matches = Get-ChildItem -LiteralPath $TempRoot -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like ("preserve-*-" + $name) } |
+            Sort-Object LastWriteTime -Descending
+        foreach ($match in $matches) {
+            $destination = Join-Path $Target $name
+            if ($match.PSIsContainer) {
+                New-Item -ItemType Directory -Force -Path $destination | Out-Null
+                Get-ChildItem -LiteralPath $match.FullName -Force | ForEach-Object {
+                    Copy-Item -LiteralPath $_.FullName -Destination $destination -Recurse -Force
+                }
+            } else {
+                Copy-Item -LiteralPath $match.FullName -Destination $destination -Force
+            }
+            break
+        }
+    }
+}
+
 Write-ABHeader
 
 $SteamPath = Find-SteamPath
-$pluginsDir = Join-Path $SteamPath "plugins"
+$pluginsDir = Find-PluginsDir -Root $SteamPath
+$legacyPluginsDir = Join-Path $SteamPath "plugins"
 $target = Join-Path $pluginsDir $PluginName
+$legacyTarget = Join-Path $legacyPluginsDir $PluginName
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("achievementbackup-install-" + [guid]::NewGuid().ToString("N"))
 $zip = Join-Path $tmp "plugin.zip"
 $url = "https://github.com/$Repo/archive/refs/heads/$Branch.zip"
@@ -147,6 +211,9 @@ Write-ABStep "Steam detectada em:"
 Write-Host "    $SteamPath" -ForegroundColor DarkGray
 Write-ABStep "Plugin sera instalado em:"
 Write-Host "    $target" -ForegroundColor DarkGray
+if ($pluginsDir -ne $legacyPluginsDir) {
+    Write-ABOk "Millennium novo detectado: usando millennium\plugins."
+}
 Write-Host ""
 
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
@@ -167,24 +234,13 @@ try {
 
     Write-ABStep "Preservando configuracoes, backups e logs existentes..."
     $preserve = @("profile", "backups", "logs", "cache", "log.txt")
-    foreach ($name in $preserve) {
-        $existing = Join-Path $target $name
-        if (Test-Path $existing) {
-            $saved = Join-Path $tmp ("preserve-" + $name)
-            Copy-Item -LiteralPath $existing -Destination $saved -Recurse -Force
-        }
-    }
+    Preserve-PluginData -TempRoot $tmp -Target $target -LegacyTarget $legacyTarget -Names $preserve
 
     Write-ABStep "Instalando o plugin..."
     New-Item -ItemType Directory -Force -Path $target | Out-Null
     Copy-PluginFiles -Source $source -Target $target
 
-    foreach ($name in $preserve) {
-        $saved = Join-Path $tmp ("preserve-" + $name)
-        if (Test-Path $saved) {
-            Copy-Item -LiteralPath $saved -Destination (Join-Path $target $name) -Recurse -Force
-        }
-    }
+    Restore-PluginData -TempRoot $tmp -Target $target -Names $preserve
     Write-ABOk "AchievementBackup instalado."
     Write-ABOk "Manifest encontrado: $(Join-Path $target "plugin.json")"
 

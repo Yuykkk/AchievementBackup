@@ -3,6 +3,9 @@ import winreg
 import json
 
 def get_steam_path():
+    env_path = os.environ.get("ACHIEVEMENTBACKUP_STEAM_PATH")
+    if env_path:
+        return env_path.replace("/", "\\")
     try:
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam")
         path, _ = winreg.QueryValueEx(key, "SteamPath")
