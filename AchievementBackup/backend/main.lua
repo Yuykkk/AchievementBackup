@@ -41,7 +41,21 @@ local function start_python_runner(root, steam)
     "$script=" .. q(runner) .. ";",
     "$log=" .. q(log_file) .. ";",
     "$err=" .. q(err_file) .. ";",
-    "$p = Start-Process -FilePath 'py' -ArgumentList @('-3', $script) -WorkingDirectory " .. q(root .. "\\backend") .. " -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $err -PassThru;",
+    "$python = $null;",
+    "$py = Get-Command py.exe -ErrorAction SilentlyContinue;",
+    "if ($py) { $test = & $py.Source -3 -c 'import sys; print(sys.executable)' 2>$null; if ($LASTEXITCODE -eq 0 -and $test) { $python = $py.Source; $args = @('-3', $script) } };",
+    "if (-not $python) {",
+    "  $candidates = @();",
+    "  foreach ($cmd in @('python.exe','python3.exe')) { $found = Get-Command $cmd -ErrorAction SilentlyContinue; if ($found) { $candidates += $found.Source } }",
+    "  $candidates += Get-ChildItem -Path $env:LOCALAPPDATA\\Programs\\Python,${env:ProgramFiles}\\Python*,${env:ProgramFiles(x86)}\\Python* -Filter python.exe -Recurse -ErrorAction SilentlyContinue | ForEach-Object FullName;",
+    "  foreach ($candidate in $candidates | Select-Object -Unique) {",
+    "    if (-not $candidate -or $candidate -like '*\\WindowsApps\\python*.exe') { continue }",
+    "    $test = & $candidate -c 'import sys; print(sys.version_info[0])' 2>$null;",
+    "    if ($LASTEXITCODE -eq 0 -and ($test | Select-Object -First 1) -eq '3') { $python = $candidate; $args = @($script); break }",
+    "  }",
+    "}",
+    "if (-not $python) { Set-Content -LiteralPath $err -Value 'Python 3 nao encontrado. Instale Python 3 ou rode install.ps1 novamente.' -Encoding UTF8; exit 1 }",
+    "$p = Start-Process -FilePath $python -ArgumentList $args -WorkingDirectory " .. q(root .. "\\backend") .. " -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $err -PassThru;",
     "if ($p) { Set-Content -LiteralPath " .. q(pid_file) .. " -Value $p.Id -Encoding ASCII }"
   }, " ")
   os.execute("powershell.exe -NoProfile -ExecutionPolicy Bypass -Command " .. q(command))

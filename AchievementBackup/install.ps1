@@ -47,6 +47,83 @@ function Test-SteamRoot {
     }
 }
 
+function Test-RealPython {
+    param([string]$Exe)
+    if ([string]::IsNullOrWhiteSpace($Exe) -or -not (Test-Path $Exe)) { return $false }
+    if ($Exe -like "*\WindowsApps\python*.exe") { return $false }
+    try {
+        $version = & $Exe -c "import sys; print(sys.version_info[0])" 2>$null
+        return $LASTEXITCODE -eq 0 -and (($version | Select-Object -First 1) -eq "3")
+    } catch {
+        return $false
+    }
+}
+
+function Find-PythonRuntime {
+    $candidates = New-Object System.Collections.Generic.List[string]
+
+    try {
+        $py = Get-Command py.exe -ErrorAction SilentlyContinue
+        if ($py) {
+            $resolved = & $py.Source -3 -c "import sys; print(sys.executable)" 2>$null
+            if ($LASTEXITCODE -eq 0 -and $resolved -and (Test-RealPython ($resolved | Select-Object -First 1))) {
+                return $py.Source
+            }
+        }
+    } catch {}
+
+    foreach ($cmd in @("python.exe", "python3.exe")) {
+        try {
+            $found = Get-Command $cmd -ErrorAction SilentlyContinue
+            if ($found) { $candidates.Add($found.Source) }
+        } catch {}
+    }
+
+    foreach ($root in @(
+        (Join-Path $env:LOCALAPPDATA "Programs\Python"),
+        (Join-Path $env:ProgramFiles "Python*"),
+        (Join-Path ${env:ProgramFiles(x86)} "Python*")
+    )) {
+        if ([string]::IsNullOrWhiteSpace($root)) { continue }
+        Get-ChildItem -Path $root -Filter python.exe -Recurse -ErrorAction SilentlyContinue |
+            ForEach-Object { $candidates.Add($_.FullName) }
+    }
+
+    foreach ($candidate in $candidates | Select-Object -Unique) {
+        if (Test-RealPython $candidate) { return $candidate }
+    }
+
+    return ""
+}
+
+function Ensure-PythonRuntime {
+    $python = Find-PythonRuntime
+    if ($python) {
+        Write-ABOk "Python 3 detectado para o backend."
+        return
+    }
+
+    Write-ABWarn "Python 3 nao encontrado. O backend do plugin precisa dele para abrir o painel e monitorar a Steam."
+    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if (-not $winget) {
+        throw "Instale Python 3 e rode o instalador novamente. winget nao esta disponivel para instalar automaticamente."
+    }
+
+    Write-ABStep "Instalando Python 3 pelo winget..."
+    & $winget.Source install --id Python.Python.3.12 --source winget --accept-package-agreements --accept-source-agreements --silent
+    if ($LASTEXITCODE -ne 0) {
+        throw "Falha ao instalar Python pelo winget. Instale Python 3 manualmente e rode o instalador novamente."
+    }
+
+    Start-Sleep -Seconds 2
+    $python = Find-PythonRuntime
+    if (-not $python) {
+        Write-ABWarn "Python foi instalado, mas ainda nao apareceu nesta sessao. A Steam reiniciada deve detecta-lo pelos caminhos comuns."
+    } else {
+        Write-ABOk "Python 3 instalado."
+    }
+}
+
 function Find-SteamPath {
     $candidates = New-Object System.Collections.Generic.List[string]
 
@@ -215,6 +292,8 @@ if ($pluginsDir -ne $legacyPluginsDir) {
     Write-ABOk "Millennium novo detectado: usando millennium\plugins."
 }
 Write-Host ""
+
+Ensure-PythonRuntime
 
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 New-Item -ItemType Directory -Force -Path $pluginsDir | Out-Null
