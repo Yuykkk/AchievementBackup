@@ -86,9 +86,6 @@ end
 local function on_load()
   local root = plugin_root():gsub("/", "\\")
   local steam = steam_path()
-  if steam ~= "" then
-    ensure_ui(root, steam)
-  end
   start_python_runner(root, steam)
   millennium.ready()
 end

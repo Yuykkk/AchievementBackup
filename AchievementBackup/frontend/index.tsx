@@ -84,23 +84,18 @@ function scheduleAchievementBackupUi(force = false) {
             const oldLoader = document.getElementById(LOADER_ID);
             if (oldLoader) oldLoader.remove();
 
+            const response = await fetch(`${UI_URL}&t=${Date.now()}`, { cache: "no-store" });
+            if (!response.ok) throw new Error(`UI load failed: ${response.status}`);
+
             const script = document.createElement("script");
             script.id = LOADER_ID;
-            script.src = `${UI_URL}&t=${Date.now()}`;
-            script.async = true;
-            script.onload = () => {
-                window.setTimeout(removeNativeFabIfPanelExists, 300);
-            };
-            script.onerror = () => {
-                console.warn("[AchievementBackup] UI script failed to load");
-                ensureNativeFab();
-                bootScheduled = false;
-                window.setTimeout(() => scheduleAchievementBackupUi(), 5000);
-            };
+            script.textContent = await response.text();
             (document.body || document.documentElement).appendChild(script);
+            window.setTimeout(removeNativeFabIfPanelExists, 300);
         } catch (error) {
             console.warn("[AchievementBackup] Global UI bootstrap failed", error);
             ensureNativeFab();
+            bootScheduled = false;
             window.setTimeout(mount, 5000);
         }
     };
